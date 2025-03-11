@@ -1,7 +1,7 @@
 fastapi
 uvicorn
-torch
 transformers
+torch
 dateparser
 protobuf
 pydantic 
