@@ -5,19 +5,26 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import logging
 
 import torch
-import dateparser
 import json
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MODEL_NAME = "tiiuae/falcon-7b-instruct"
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForCausalLM.from_pretrained(MODEL_NAME, torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32)
-# Move to GPU if available
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model.to(device)
+is_mps = torch.backends.mps.is_available()  # True on M-series Macs
+dtype   = torch.float16 if is_mps else torch.float32
+# DictaLM ships with a custom config, so we allow remote code
+MODEL_NAME = "dicta-il/dictalm2.0-instruct"
+tokenizer = AutoTokenizer.from_pretrained(
+    MODEL_NAME, trust_remote_code=True, use_fast=False
+)
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    torch_dtype=dtype,
+    device_map="auto",          # puts weights on the M-series GPU
+    trust_remote_code=True
+)
+
+device = "mps" if is_mps else "cpu"
 
 
 app = FastAPI()
@@ -37,7 +44,7 @@ class MessageInput(BaseModel):
 def extract_event_details(text):
     try:   # Find the first { and last } in the response
         prompt = f"""
-        Extract event details from the following message in Hebrew:
+        Extract event details from the following message:
         "{text}"
 
         Respond strictly in JSON format with this structure:
@@ -53,7 +60,9 @@ def extract_event_details(text):
         logger.info(f"Processing input text: {text}")
         
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        logger.info(f"1")
         outputs = model.generate(**inputs, max_length=200)
+        logger.info(f"2")
         response = tokenizer.decode(outputs[0], skip_special_tokens=True)
 
         logger.info(f"Raw model response: {response}")
