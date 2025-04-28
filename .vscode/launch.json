@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+        
         {
             "name": "Python: FastAPI",
             "type": "debugpy",
@@ -16,6 +17,14 @@
             ],
             "jinja": true,
             "justMyCode": true
+        },
+        {
+            "name": "Node.js: Launch Program",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/bot/app.js",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
         }
     ]
 } 
